@@ -300,12 +300,20 @@ jsonRPCviaMQ.toJsonRpcSuccess = function(id, result = NULL, version="2.0") {
 }
 
 
-
 ##
 # Echo a request to the response queue.  This is a handy method for testing end-to-end.
 #
 jsonRPCviaMQ.echo = function(text) {
-	return(text);
+	return(response);
+}
+
+##
+# Echo a request to the response queue.  This is a handy method for testing end-to-end.
+#
+jsonRPCviaMQ.who = function(text, sleepS) {
+	response <- paste(Sys.info()["login"], " on ", Sys.info()["nodename"], " is waiting for work", sep="");
+	Sys.sleep(sleepS)
+	return(response);
 }
 	
 	
