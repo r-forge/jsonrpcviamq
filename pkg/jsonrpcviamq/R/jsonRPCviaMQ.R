@@ -47,7 +47,7 @@ jsonRPCviaMQ.runForever = function(queue, host, queueType, waitForS = 60) {
 # Sleep for 'waitTimeS' seconds between message checks.
 #
 jsonRPCviaMQ.runFor = function(queue, host, queueType, durationS, waitForS = 60) {
-	return(jsonRPCviaMQ.run(queue = queue, host = host, queueType = queueType, durationS = dureationS, waitForS = waitForS));
+	return(jsonRPCviaMQ.run(queue = queue, host = host, queueType = queueType, durationS = durationS, waitForS = waitForS));
 }
 
 
