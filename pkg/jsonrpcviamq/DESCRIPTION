@@ -1,0 +1,15 @@
+Package: jsonRPCviaMQ
+Type: Package
+Title: Execute JSON-RPC messages retrieved from message queue
+Version: 0.1
+Date: 2013-03-27
+Author: Jesse Ross <jross@cornell.edu>
+Depends: R (>= 2.13.0), rJava (>= 0.6-0) 
+Suggests: testthat
+Imports: rJava (>= 0.6-0), RJSONIO, messageQueue (>= 0.4), futile.logger
+SystemRequirements: Java (>=7.0)
+Maintainer: Matt MacGillivray <matthew.macgillivray@cornell.edu>
+Description: A very simple json-rpc server (loop) that gets requests from a message queue (activeMQ or rabbitMQ) and will reply to a queue if necessary.
+License: LGPL (>= 2.0)
+Repository: r-forge
+URL: http://jsonRPCviaMQ.r-forge.r-project.org/
