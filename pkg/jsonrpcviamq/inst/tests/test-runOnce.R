@@ -54,6 +54,53 @@ test_that("can execute a single RPC statement", {
 });
 
 
+test_that("can execute a single BATCH RPC statement", {
+	request <- '[ {"jsonrpc": "2.0", "method": "Sys.time", "id": "70"}, {"jsonrpc": "2.0", "method": "Sys.time", "id": "71"} ]';
+	
+	# put the message on the queue for execution
+	producer.queue = messageQueue.factory.getProducerFor(host, queue, type);
+	status <- messageQueue.producer.putText(producer=producer.queue, text=request, correlationId = "111-222-777", replyToQueue=replyTo);
+
+#	Sys.sleep(5);
+	
+	# for comparison
+	time_before_request <- as.double(Sys.time());
+
+
+	# execute
+	msg_count = jsonRPCviaMQ.runOnce(queue, host, type);
+	expect_equal(msg_count, 1, info=paste("actual number of messages processed: ",msg_count,sep=""));
+
+#	Sys.sleep(5);
+
+	# retrieve the response on the replyTo queue
+	consumer.queue = messageQueue.factory.getConsumerFor(host, replyTo, type);
+	response <- messageQueue.consumer.getNextText(consumer.queue);
+	messageQueue.consumer.close(consumer.queue);
+	
+	expect_true(!is.null(response), info=paste("runOnce - Message is null."));
+	
+	robj <- fromJSON(response[['value']]);
+
+	
+	# should be 2 results
+	expect_equal(length(robj), 2, info=response[['value']]);
+	expect_equal(response[['correlationId']], '111-222-777');
+	
+	for (r in robj) {
+		# result
+		expect_true(r[['id']] == '70' || r[['id']] == '71');
+		expect_true(is.double(r[['result']]));
+		expect_true(r[['result']] >= time_before_request, info=paste("time start: ",time_before_request,", result: ",r[['result']], sep=""));
+	}
+	
+	
+	
+	# close this last, because in memory broker deletes contents of queue if there are no references
+	messageQueue.producer.close(producer.queue);
+});
+
+
 
 test_that("can fail gracefully", {
 	request <- '{"jsonrpc": "2.0", "method": "Sys.time", "params": [1], "id": "72"}';

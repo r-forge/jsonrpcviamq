@@ -104,7 +104,7 @@ jsonRPCviaMQ.run = function(queue, host = "tcp://localhost:61616", queueType = "
 				
 				
 				# process the request (first element of list, which is the RPC body)
-				response = jsonRPCviaMQ.executeRPC(request.message[['value']]);
+				response = jsonRPCviaMQ.executeJsonRPC(request.message[['value']]);
 				messages_processed <- messages_processed + 1;
 				flog.debug("[jsonRPCviaMQ.run] response: %s",response, name=logger);
 	
@@ -145,65 +145,163 @@ jsonRPCviaMQ.run = function(queue, host = "tcp://localhost:61616", queueType = "
 
 
 
-
 ##
-# Execute the passed in JSON RPC call.
-# Returns a json-rpc response.
+# Execute a single RPC or batch of RPCs.
 #
-# Error codes outlined here: http://www.jsonrpc.org/specification
+# This method will decode the string and call 'executeRPC' for each valid RPC call found.
 #
-jsonRPCviaMQ.executeRPC = function(request) {
+# Input is the raw jsonRPC formatted request.
+# Output is the raw jsonRPC formatted response.
+#
+jsonRPCviaMQ.executeJsonRPC = function(rpcRequestString) {
 	require(RJSONIO);
 	require(futile.logger);
 	logger <- 'jsonRPCviaMQ';
 	
 	# default response
 	response = '{"jsonrpc": "2.0", "error": {"code": -32600, "message": "Invalid Request (generic)"}, "id": null}';
-	exec_time = Sys.time()
-	flog.debug("executeRPC, request: %s", request, name=logger);
 
 	
-	# parse the request
-	request = tryCatch(
+	# default response
+	exec_time = Sys.time()
+	flog.debug("executeJsonRPC, request: %s, type: %s, (%s)", rpcRequestString, typeof(rpcRequestString), typeof(as.character(rpcRequestString)), name=logger);
+
+	
+	# convert input string into JSON
+	calls = tryCatch(
 		{  
-			fromJSON(request);
+			calls = fromJSON(content=rpcRequestString);
+			
+			# return calls object
+			calls;
 		},
 		error = function (err)
 		{
 			flog.error("error parsing json rpc request, error: %s", err, name=logger);
-			error_message = paste("Parse error.  Original request:", request, ", executed at: ", exec_time, "error message: ", err, sep="");
+			calls = null;
 			
-			# jsonrpc 2.0 spec says to return error code -32700 on a parse error: http://www.jsonrpc.org/specification
-			response = jsonRPCviaMQ.toJsonRpcError(id = NULL, error_code = -32700, error_message);
+			# return calls object
+			calls;
 		}
 	)
-	flog.debug("executeRPC, post tryCatch", name=logger);
+
+	# half the time, calls is a character object - not sure why, but i can convert it back
+	if (!is.null(calls) && is.character(calls)) {
+		calls = as.list(calls);
+	}
+
+	flog.debug(" before processing calls, is.null(calls): %s", is.null(calls), name=logger);
+	# no requests...
+	if (is.null(calls)) {
+		flog.debug(" calls is null.", name=logger);
+		
+		# jsonrpc 2.0 spec says to return error code -32700 on a parse error: http://www.jsonrpc.org/specification
+		error_message = paste("Parse error.  Original request:", rpcRequestString, ", executed at: ", exec_time, sep="");
+		response = jsonRPCviaMQ.toJsonRpcError(id = NULL, error_code = -32700, error_message);
+		
+	} else if (is.character(calls)) {
+		flog.debug(" calls is a character type: %s, length: %s", calls, length(calls), name=logger);
+		flog.debug("   method: %s", calls[['method']], name=logger);
+		flog.debug("   list: %s", as.list(calls), name=logger);
+		flog.debug("   list.method: %s", as.list(calls)[['method']], name=logger);
+		
+	} else if (length(calls) == 0) {
+		flog.debug(" calls length is 0", name=logger);
+		
+		# jsonrpc 2.0 spec says to return error code -32600 on an invalid request error: http://www.jsonrpc.org/specification
+		error_message = paste("Invalid request.  Original request:", rpcRequestString, ", executed at: ", exec_time, sep="");
+		response = jsonRPCviaMQ.toJsonRpcError(id = NULL, error_code = -32600, error_message);
+		
+	# 1 or more requests
+	} else {
+		
+		results <- list();
+
+		# BATCH of calls: it's a list, NOT a name/value list, and has at least 1 element
+		if (is.list(calls) && is.null(names(calls)) && length(calls) > 0){
+	
+			index <- 1;
+			# execute each call individually...
+			for (call in calls) {
+				flog.debug("    multi - method: %s, length: %s, id: %s", call[['method']], length(call), call[['id']], name=logger);
+				
+				# execute the remote procedure call, return the result..
+				result = jsonRPCviaMQ.executeRPC(call, exec_time);
+				results[[index]] <- result;
+				index <- index+1;
+			}
+	
+		
+		# SINGLE call: it's name/value list with at least 3 elements
+		} else if (is.list(calls) && !is.null(names(calls)) && length(calls) > 2) {
+			flog.debug("    single - method: %s, length: %s", calls[['method']], length(calls), name=logger);
+			
+			# execute the remote procedure call, return the result..
+			result = jsonRPCviaMQ.executeRPC(calls, exec_time);
+			results[[1]] <- result;
+		}
+	
+		
+		
+		# convert result to a json string
+	
+	
+		# single results will be in a name/value list
+		if (length(results) == 1) {
+			response = toJSON(result, pretty=FALSE, simplify=FALSE, simplifyWithNames = FALSE, digits=50);
+			flog.debug(" single response: %s ", response, name=logger);
+			
+		# if a multi result, list
+		} else {
+			response = toJSON(results, pretty=FALSE, simplify=FALSE, simplifyWithNames = FALSE, digits=50);
+			flog.debug(" multiple results: %s ", response, name=logger);
+		}
+	}
+
+	return(response);
+}
+
+
+##
+# Execute a single RPC from an R object structured like a jsonrpc object
+# Returns a list with all parameters needed for a jsonrpc response
+#
+# Error codes outlined here: http://www.jsonrpc.org/specification
+# 
+jsonRPCviaMQ.executeRPC = function(call, exec_time) {
+	require(RJSONIO);
+	require(futile.logger);
+	logger <- 'jsonRPCviaMQ';
 
 	
 	# do we have a valid rpc request?
-	if (!is.null(request) && !is.null(request[['method']]) && !is.null(request[['jsonrpc']]) && request[['jsonrpc']] == "2.0") {
+	if (!is.null(call) && !is.null(call[['method']]) && !is.null(call[['jsonrpc']]) && call[['jsonrpc']] == "2.0") {
 		
 		# if a method was specified, and it exists
-		if (!is.null(request[['method']]) && exists(request[['method']])) {
+		if (!is.null(call[['method']]) && exists(call[['method']])) {
 			
-			response <- tryCatch({
+			result <- tryCatch({
 						
 				# deal with an empty parameter list
-				if ('params' %in% names(request)) {
-					params <- as.list(request[['params']]);
+				if ('params' %in% names(call)) {
+					params <- as.list(call[['params']]);
 				} else {
 					params <- list();
 				}
 				
 				
 				# execute the method
-				exec_result = do.call(request[['method']], params);
-				response_success = jsonRPCviaMQ.toJsonRpcSuccess(id = request[['id']], result = exec_result);
+				flog.info("executing: %s ", call[['method']]);
+				exec_result = do.call(call[['method']], params);
+				flog.trace("   result: %s", exec_result, name=logger);
 				
-				flog.trace("   -- result: %s", response_success, name=logger);
+				# build an object that holds all the fields a response would hold...
+				result_success = list(jsonrpc="2.0", result=exec_result, id=call[['id']]);
+#				response_success = jsonRPCviaMQ.toJsonRpcSuccess(id = request[['id']], result = exec_result);
+				
 				
 				# successful response
-				response_success;
+				result_success;
 				
 				
 			}, error = function(err) {
@@ -213,19 +311,21 @@ jsonRPCviaMQ.executeRPC = function(request) {
 				flog.error(paste(err), name=logger);
 				flog.error("", name=logger);
 				flog.error("", name=logger);
-				error_message = paste("Invalid method parameters (or error executing): '", request[['method']], "', executed at: ", exec_time, sep="");
-				response_error = jsonRPCviaMQ.toJsonRpcError(id = request[['id']], error_code = -32602, error_message);
+				error_message = paste("Invalid method parameters (or error executing): '", call[['method']], "', executed at: ", exec_time, sep="");
+				
+				result_error = list(jsonrpc="2.0", error=list(code=-32602, message=error_message), id=call[['id']]);
+#				response_error = jsonRPCviaMQ.toJsonRpcError(id = call[['id']], error_code = -32602, error_message);
 			
 				# error response
-				response_error;
-				
+				result_error;
 			});
 	
 		} else {
-			flog.warn("method doesn't exist: %s", request[['method']], name=logger);
+			flog.warn("method doesn't exist: %s", call[['method']], name=logger);
 			
-			emessage = paste("Method not found: '", request[['method']], "', executed at: ", exec_time, sep="");
-			response = jsonRPCviaMQ.toJsonRpcError(id = request[['id']], error_code = -32601, error_message = emessage);
+			emessage = paste("Method not found: '", call[['method']], "', executed at: ", exec_time, sep="");
+			result = list(jsonrpc="2.0", error=list(code=-32601, message=emessage), id=call[['id']]);
+			#response = jsonRPCviaMQ.toJsonRpcError(id = call[['id']], error_code = -32601, error_message = emessage);
 		}
 
 		
@@ -234,26 +334,29 @@ jsonRPCviaMQ.executeRPC = function(request) {
 	} else {
 		emessage = "Unknown error.";
 		mid = NULL;
-		if (is.null(request)) {
+		if (is.null(call)) {
 			emessage = "Invalid request (empty).";
-		} else if (is.null(request[['jsonrpc']]) || request[['jsonrpc']] != "2.0") {
+		} else if (is.null(call[['jsonrpc']]) || call[['jsonrpc']] != "2.0") {
 			emessage = "Invalid request: jsonrpc version, expected 2.0.";
-			mid = request[['id']];
-		} else if (is.null(request[['method']])) {
+			mid = call[['id']];
+		} else if (is.null(call[['method']])) {
 			emessage = "Invalid request: missing method parameter.";
-			mid = request$id;
+			mid = call$id;
 		}
 		
 		
 		flog.error(emessage, name=logger);
-		error_message = paste(emessage, " for method: ", request[['method']], ", executed at: ", exec_time, sep="");
-		response = jsonRPCviaMQ.toJsonRpcError(id = mid, error_code = -32600, error_message);
+		error_message = paste(emessage, " for method: ", call[['method']], ", executed at: ", exec_time, sep="");
+		result = list(jsonrpc="2.0", error=list(code = -32600, message=error_message), id=mid);
+#		response = jsonRPCviaMQ.toJsonRpcError(id = mid, error_code = -32600, error_message);
 	}
 
 
-	flog.debug("executeRPC returning: %s", response, name=logger);
-	return(response);
+	flog.debug("executeRPC complete", name=logger);
+	return(result);
 }
+
+
 
 
 
@@ -310,8 +413,8 @@ jsonRPCviaMQ.echo = function(text) {
 ##
 # Echo a request to the response queue.  This is a handy method for testing end-to-end.
 #
-jsonRPCviaMQ.who = function(text, sleepS) {
-	response <- paste(Sys.info()["login"], " on ", Sys.info()["nodename"], " is waiting for work", sep="");
+jsonRPCviaMQ.who = function(sleepS=10) {
+	response <- paste(Sys.info()["login"], " on ", Sys.info()["nodename"], " is waiting for work, sleeping for ",sleepS,"s", sep="");
 	Sys.sleep(sleepS)
 	return(response);
 }

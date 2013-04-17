@@ -1,8 +1,8 @@
 Package: jsonRPCviaMQ
 Type: Package
 Title: Execute JSON-RPC messages retrieved from message queue
-Version: 0.1
-Date: 2013-03-27
+Version: 0.5
+Date: 2013-04-17
 Author: Jesse Ross <jross@cornell.edu>
 Depends: R (>= 2.13.0), rJava (>= 0.6-0) 
 Suggests: testthat

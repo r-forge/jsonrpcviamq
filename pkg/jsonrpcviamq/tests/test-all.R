@@ -3,7 +3,7 @@ library(jsonRPCviaMQ)
 library(futile.logger);
 
 # only show flog.debug logging statements
-flog.threshold(DEBUG, name='jsonRPCviaMQ');
+flog.threshold(TRACE, name='jsonRPCviaMQ');
 
 # execute the tests under inst/tests
 # https://github.com/hadley/devtools/wiki/Testing
