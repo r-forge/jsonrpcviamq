@@ -6,14 +6,24 @@
 # Error codes outlined here - http://www.jsonrpc.org/specification
 # futile.logger outlined here - http://www.r-bloggers.com/better-logging-in-r-aka-futile-logger-1-3-0-released/
 #
-# TODO:
-# 1.  batch RPC calls.
+#
 #
 # author: Jesse Ross (jr634 at cornell)
 # date: 3/21/13
 #
 # modifier: Matt MacGillivray (msm336 at cornell)
 ##
+
+
+
+# BEGINNING DEV, building out the basic structure/documentation
+# R> package.skeleton(name="jsonRPCviaMQ", code_files=c("jsonRPCviaMQ.R"), list=c("jsonRPCviaMQ.runOnce", "jsonRPCviaMQ.runForever", "jsonRPCviaMQ.runFor"))
+
+# CHECKING/TESTING: running tests, ensuring the package structure is fine, run from the source's parent directory:
+# R CMD check --no-multiarch jsonRPCviaMQ
+
+# BUILDING, creating ZIP or tar.gz file for distribution:
+# R CMD INSTALL --no-multiarch --build jsonRPCviaMQ
 
 
 ##
@@ -73,7 +83,11 @@ jsonRPCviaMQ.run = function(queue, host = "tcp://localhost:61616", queueType = "
 	logger <- 'jsonRPCviaMQ';
 	flog.debug("[jsonRPCviaMQ.run] run(queue=%s, host=%s, queueType=%s, durationS=%s, waitForS=%s)", queue, host, queueType, durationS, waitForS, name=logger);
 	
-	start_time_seconds = Sys.time();
+	# print warning messages as we go
+	options(warn=1);
+	options(digits.secs=3);  # show 
+	
+	start_time_seconds = as.numeric(Sys.time());
 	cur_time_seconds = start_time_seconds + 0.99;
 	loops = 0;
 	messages_processed = 0;
@@ -89,7 +103,8 @@ jsonRPCviaMQ.run = function(queue, host = "tcp://localhost:61616", queueType = "
 	# loop for a certain duration (or infinite if durationS == -1)
 	while (durationS == -1 || (cur_time_seconds - start_time_seconds < durationS)) {
 		loops <- loops + 1;
-		flog.trace("[jsonRPCviaMQ.run] looping, duration so far: %s", (cur_time_seconds - start_time_seconds), name=logger);
+		flush.console();
+		flog.trace("[jsonRPCviaMQ.run] looping, duration so far: %s, limit: %s", cur_time_seconds - start_time_seconds, durationS, name=logger);
 
 		
 		# make sure we can continue to process messages if a few cause errors
@@ -100,13 +115,13 @@ jsonRPCviaMQ.run = function(queue, host = "tcp://localhost:61616", queueType = "
 			
 			
 			if (!is.null(request.message)) {
-				flog.trace("[jsonRPCviaMQ.run] decoding message...", name=logger);
+				flog.debug("[jsonRPCviaMQ.run] message received, processing...", name=logger);
 				
 				
 				# process the request (first element of list, which is the RPC body)
 				response = jsonRPCviaMQ.executeJsonRPC(request.message[['value']]);
 				messages_processed <- messages_processed + 1;
-				flog.debug("[jsonRPCviaMQ.run] response: %s",response, name=logger);
+				flog.debug("[jsonRPCviaMQ.run] response: %s", response, name=logger);
 	
 				
 				# is there a replyto queue?
@@ -120,7 +135,10 @@ jsonRPCviaMQ.run = function(queue, host = "tcp://localhost:61616", queueType = "
 				}
 				
 			} else {
-				flog.trace("[jsonRPCviaMQ.run] No message available, sleeping...", name=logger);
+				flog.debug("[jsonRPCviaMQ.run] No message available, sleeping for %ss...", waitForS, name=logger);
+				
+				# ensure logging messages are written, sometimes they are buffered
+				flush.console();
 				Sys.sleep(waitForS)
 			}
 		
@@ -128,18 +146,21 @@ jsonRPCviaMQ.run = function(queue, host = "tcp://localhost:61616", queueType = "
 		},
 		error = function (err)
 		{
-			flog.error("[jsonRPCviaMQ.run] Unexplained error reading/processing rpc message, error: %s", err, name=logger);
+			flog.error("[jsonRPCviaMQ.run] Unexplained error reading/processing rpc message, error: %s, sleeping for %ss", err, waitForS, name=logger);
+			
+			# ensure logging messages are written, sometimes they are buffered
+			flush.console();
 			Sys.sleep(waitForS)
 		});
-		cur_time_seconds <- Sys.time();
+		cur_time_seconds <- as.numeric(Sys.time());
 	}
 	flog.debug("[jsonRPCviaMQ.run] (done) looping, loop count: %s, messages processed: %s, duration: %s", loops, messages_processed, (cur_time_seconds - start_time_seconds), name=logger);
-	
+	flush.console();
 
 	# close the consumer queue
 	messageQueue.consumer.close(request.queue);
 	flog.trace("[jsonRPCviaMQ.run] closed queue consumer", name=logger);
-	
+
 	return(messages_processed);
 }
 
@@ -217,7 +238,7 @@ jsonRPCviaMQ.executeJsonRPC = function(rpcRequestString) {
 			index <- 1;
 			# execute each call individually...
 			for (call in calls) {
-				flog.debug("    multi - method: %s, length: %s, id: %s", call[['method']], length(call), call[['id']], name=logger);
+				flog.debug("    multi - method[%s]: %s, length: %s, id: %s", index, call[['method']], length(call), call[['id']], name=logger);
 				
 				# execute the remote procedure call, return the result..
 				result = jsonRPCviaMQ.executeRPC(call, exec_time);
@@ -242,12 +263,12 @@ jsonRPCviaMQ.executeJsonRPC = function(rpcRequestString) {
 	
 		# single results will be in a name/value list
 		if (length(results) == 1) {
-			response = toJSON(result, pretty=FALSE, simplify=FALSE, simplifyWithNames = FALSE, digits=50);
+			response = toJSON(result, pretty=FALSE, simplify=FALSE, simplifyWithNames = FALSE, digits=50, collapse=" ");
 			flog.debug(" single response: %s ", response, name=logger);
 			
 		# if a multi result, list
 		} else {
-			response = toJSON(results, pretty=FALSE, simplify=FALSE, simplifyWithNames = FALSE, digits=50);
+			response = toJSON(results, pretty=FALSE, simplify=FALSE, simplifyWithNames = FALSE, digits=50, collapse=" ");
 			flog.debug(" multiple results: %s ", response, name=logger);
 		}
 	}
@@ -285,9 +306,9 @@ jsonRPCviaMQ.executeRPC = function(call, exec_time) {
 				
 				
 				# execute the method
-				flog.info("executing: %s ", call[['method']]);
+				flog.info("executing method: %s(%s)", call[['method']], paste(names(params), "='", params,"'", sep="", collapse=", "));
 				exec_result = do.call(call[['method']], params);
-				flog.trace("   result: %s", exec_result, name=logger);
+				flog.info("   done, result: %s", exec_result, name=logger);
 				
 				# build an object that holds all the fields a response would hold...
 				result_success = list(jsonrpc="2.0", result=exec_result, id=call[['id']]);
@@ -374,7 +395,7 @@ jsonRPCviaMQ.toJsonRpcError = function(id, error_code, error_message, version = 
 	
 	
 	# 'digits=X' ensures we aren't losing precision on floating point numbers
-	jsonMsg <- toJSON(msg, pretty=TRUE, simplify=FALSE, simplifyWithNames = FALSE, digits=50);
+	jsonMsg <- toJSON(msg, pretty=TRUE, simplify=FALSE, simplifyWithNames = FALSE, digits=50, collapse=" ");
 	return(jsonMsg);
 }
 
@@ -392,7 +413,7 @@ jsonRPCviaMQ.toJsonRpcSuccess = function(id, result = NULL, version="2.0") {
 	msg$result = result;
 
 	# 'digits=X' ensures we aren't losing precision on floating point numbers
-	jsonMsg <- toJSON(msg, pretty=TRUE, simplify=FALSE, simplifyWithNames = FALSE, digits=50);
+	jsonMsg <- toJSON(msg, pretty=TRUE, simplify=FALSE, simplifyWithNames = FALSE, digits=50, collapse=" ");
 	return(jsonMsg);
 }
 
