@@ -4,7 +4,7 @@ Title: Execute JSON-RPC messages retrieved from message queue
 Version: 0.5
 Date: 2013-04-17
 Author: Jesse Ross <jross@cornell.edu>
-Depends: R (>= 2.13.0), rJava (>= 0.6-0) 
+Depends: R (>= 2.13.0), rJava (>= 0.6-0), messageQueue (>= 0.4), RJSONIO, futile.logger, testthat
 Suggests: testthat
 Imports: rJava (>= 0.6-0), RJSONIO, messageQueue (>= 0.4), futile.logger
 SystemRequirements: Java (>=7.0)

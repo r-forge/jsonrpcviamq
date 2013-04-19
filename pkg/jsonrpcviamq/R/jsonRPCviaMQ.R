@@ -199,12 +199,6 @@ jsonRPCviaMQ.executeJsonRPC = function(rpcRequestString) {
 		error_message = paste("Parse error.  Original request:", rpcRequestString, ", executed at: ", exec_time, sep="");
 		response = jsonRPCviaMQ.toJsonRpcError(id = NULL, error_code = -32700, error_message);
 		
-	} else if (is.character(calls)) {
-		flog.debug(" calls is a character type: %s, length: %s", calls, length(calls), name=logger);
-		flog.debug("   method: %s", calls[['method']], name=logger);
-		flog.debug("   list: %s", as.list(calls), name=logger);
-		flog.debug("   list.method: %s", as.list(calls)[['method']], name=logger);
-		
 	} else if (length(calls) == 0) {
 		flog.debug(" calls length is 0", name=logger);
 		
@@ -407,7 +401,7 @@ jsonRPCviaMQ.toJsonRpcSuccess = function(id, result = NULL, version="2.0") {
 # Echo a request to the response queue.  This is a handy method for testing end-to-end.
 #
 jsonRPCviaMQ.echo = function(text) {
-	return(response);
+	return(text);
 }
 
 ##
