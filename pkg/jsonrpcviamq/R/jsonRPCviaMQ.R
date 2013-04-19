@@ -7,6 +7,8 @@
 # futile.logger outlined here - http://www.r-bloggers.com/better-logging-in-r-aka-futile-logger-1-3-0-released/
 #
 #
+# Documentation uses 'inlinedocs' style, so Rd files are generated.
+#
 #
 # author: Jesse Ross (jr634 at cornell)
 # date: 3/21/13
@@ -26,37 +28,42 @@
 # R CMD INSTALL --no-multiarch --build jsonRPCviaMQ
 
 
-##
-# Convenience method.
-#
-# Connect to a queue, check for a single message and execute if a valid message was received.
-# Exit after checking for 1 message.
-#
-jsonRPCviaMQ.runOnce = function(queue, host, queueType) {
+
+
+jsonRPCviaMQ.runOnce <- function
+	###
+	### Convenience method.
+	###
+	### Connect to a queue, check for a single message and execute if a valid message was received.
+	### Exit after checking for 1 message.
+	###
+	(queue, host, queueType) {
 	return(jsonRPCviaMQ.run(queue = queue, host = host, queueType = queueType, durationS = 1, waitForS = 1));
 }
 
 
-##
-# Convenience method.
-#
-# Connect to a queue, check for a single message and execute if a valid message was received.
-# Never exit, continue checking for messages indefinitely.
-# Sleep for 'waitForS' seconds between message checks.
-#
-jsonRPCviaMQ.runForever = function(queue, host, queueType, waitForS = 60) {
+jsonRPCviaMQ.runForever <- function
+	###
+	### Convenience method.
+	###
+	### Connect to a queue, check for a single message and execute if a valid message was received.
+	### Never exit, continue checking for messages indefinitely.
+	### Sleep for 'waitForS' seconds between message checks.
+	###
+	(queue, host, queueType, waitForS = 60) {
 	return(jsonRPCviaMQ.run(queue = queue, host = host, queueType = queueType, durationS = -1, waitForS = waitForS));
 }
 
 
-##
-# Convenience method.
-#
-# Connect to a queue, check for a single message and execute if a valid message was received.
-# Run for a specified duration, in seconds (i.e. 6hrs = 6*60*60).
-# Sleep for 'waitTimeS' seconds between message checks.
-#
-jsonRPCviaMQ.runFor = function(queue, host, queueType, durationS, waitForS = 60) {
+jsonRPCviaMQ.runFor <- function
+	###
+	### Convenience method.
+	###
+	### Connect to a queue, check for a single message and execute if a valid message was received.
+	### Run for a specified duration, in seconds (i.e. 6hrs = 6*60*60).
+	### Sleep for 'waitTimeS' seconds between message checks.
+	###
+	(queue, host, queueType, durationS, waitForS = 60) {
 	return(jsonRPCviaMQ.run(queue = queue, host = host, queueType = queueType, durationS = durationS, waitForS = waitForS));
 }
 
@@ -65,27 +72,35 @@ jsonRPCviaMQ.runFor = function(queue, host, queueType, durationS, waitForS = 60)
 
 
 
-##
-# The real logic
-#
-# Connect to a queue, check for a single message and execute if a valid message was received.
-# durationS indicates how many seconds to run this 'server' for.
-# waitForS indicates how long to 'sleep' between checks of the queue.
-# queueType indicates the type of queue to query, valid values are 'activeMQ' and 'rabbitMQ' as per https://code.google.com/p/r-message-queue/
-#
-# returns the number of messages processed.
-#
-#jsonRPCviaMQ.run = function (requestQueue = "R_RF_requestQueue", responseQueue = "R_RF_responseQueue",
-#                                  mqHostPort = "tcp://localhost:61616", mqType = "activeMQ", sleepS = 60) {
-jsonRPCviaMQ.run = function(queue, host = "tcp://localhost:61616", queueType = "activeMQ", durationS = -1, waitForS = 60) {
+jsonRPCviaMQ.run = function
+	###
+	### The real logic
+	###
+	### Connect to a queue, check for a single message and execute if a valid message was received.
+	### durationS indicates how many seconds to run this 'server' for.
+	### waitForS indicates how long to 'sleep' between checks of the queue.
+	### queueType indicates the type of queue to query, valid values are 'activeMQ' and 'rabbitMQ' as per https://code.google.com/p/r-message-queue/
+	###
+	### returns the number of messages processed.
+	###
+	(queue, ##<< name of queue to pull messages from
+	host = "tcp://localhost:61616", ##<< server hosting the queue specified above, default is tcp://localhost:61616
+	queueType = "activeMQ", ##<< type of queue, currently supports activeMQ and rabbitMQ
+	durationS = -1, ##<< duration to run, in seconds, before exiting
+	waitForS = 60 ##<< time to wait, in seconds, before checking the queue if no work was found during the previous check
+	) {
+		
+		
 	require(messageQueue);
 	require(futile.logger);
 	logger <- 'jsonRPCviaMQ';
 	flog.debug("[jsonRPCviaMQ.run] run(queue=%s, host=%s, queueType=%s, durationS=%s, waitForS=%s)", queue, host, queueType, durationS, waitForS, name=logger);
 	
-	# print warning messages as we go
+	## print warning messages as we go
 	options(warn=1);
-	options(digits.secs=3);  # show 
+	
+	# only 3 significant digits
+	options(digits.secs=3);
 	
 	start_time_seconds = as.numeric(Sys.time());
 	cur_time_seconds = start_time_seconds + 0.99;
@@ -166,21 +181,25 @@ jsonRPCviaMQ.run = function(queue, host = "tcp://localhost:61616", queueType = "
 
 
 
-##
-# Execute a single RPC or batch of RPCs.
-#
-# This method will decode the string and call 'executeRPC' for each valid RPC call found.
-#
-# Input is the raw jsonRPC formatted request.
-# Output is the raw jsonRPC formatted response.
-#
-jsonRPCviaMQ.executeJsonRPC = function(rpcRequestString) {
+jsonRPCviaMQ.executeJsonRPC = function
+	###
+	### Execute a single RPC or batch of RPCs.
+	###
+	### This method will decode the string and call 'executeRPC' for each valid RPC call found.
+	###
+	### Input is the raw jsonRPC formatted request.
+	### Output is the raw jsonRPC formatted response.
+	###
+	(rpcRequestString ##<< unparsed string in json-rpc format
+	) {
+
+
 	require(RJSONIO);
 	require(futile.logger);
 	logger <- 'jsonRPCviaMQ';
 	
 	# default response
-	response = '{"jsonrpc": "2.0", "error": {"code": -32600, "message": "Invalid Request (generic)"}, "id": null}';
+	response = '{"jsonrpc": "2.0", "error": {"code": -32600, "message": "Invalid Request (generic)"}, "id": NULL}';
 
 	
 	# default response
@@ -191,7 +210,7 @@ jsonRPCviaMQ.executeJsonRPC = function(rpcRequestString) {
 	# convert input string into JSON
 	calls = tryCatch(
 		{  
-			calls = fromJSON(content=rpcRequestString);
+			calls = RJSONIO::fromJSON(content=rpcRequestString);
 			
 			# return calls object
 			calls;
@@ -199,7 +218,7 @@ jsonRPCviaMQ.executeJsonRPC = function(rpcRequestString) {
 		error = function (err)
 		{
 			flog.error("error parsing json rpc request, error: %s", err, name=logger);
-			calls = null;
+			calls = NULL;
 			
 			# return calls object
 			calls;
@@ -263,12 +282,12 @@ jsonRPCviaMQ.executeJsonRPC = function(rpcRequestString) {
 	
 		# single results will be in a name/value list
 		if (length(results) == 1) {
-			response = toJSON(result, pretty=FALSE, simplify=FALSE, simplifyWithNames = FALSE, digits=50, collapse=" ");
+			response = RJSONIO::toJSON(result, pretty=FALSE, simplify=FALSE, simplifyWithNames = FALSE, digits=50, collapse=" ");
 			flog.debug(" single response: %s ", response, name=logger);
 			
 		# if a multi result, list
 		} else {
-			response = toJSON(results, pretty=FALSE, simplify=FALSE, simplifyWithNames = FALSE, digits=50, collapse=" ");
+			response = RJSONIO::toJSON(results, pretty=FALSE, simplify=FALSE, simplifyWithNames = FALSE, digits=50, collapse=" ");
 			flog.debug(" multiple results: %s ", response, name=logger);
 		}
 	}
@@ -277,13 +296,17 @@ jsonRPCviaMQ.executeJsonRPC = function(rpcRequestString) {
 }
 
 
-##
-# Execute a single RPC from an R object structured like a jsonrpc object
-# Returns a list with all parameters needed for a jsonrpc response
-#
-# Error codes outlined here: http://www.jsonrpc.org/specification
-# 
-jsonRPCviaMQ.executeRPC = function(call, exec_time) {
+jsonRPCviaMQ.executeRPC = function
+	###
+	### Execute a single RPC from an R object structured like a jsonrpc object
+	### Returns a list with all parameters needed for a jsonrpc response
+	###
+	### Error codes outlined here: http://www.jsonrpc.org/specification
+	### 
+	(call, ##<< structured variable representing the jsonrpc call
+	exec_time) {
+
+
 	require(RJSONIO);
 	require(futile.logger);
 	logger <- 'jsonRPCviaMQ';
@@ -375,11 +398,13 @@ jsonRPCviaMQ.executeRPC = function(call, exec_time) {
 
 
 
-##
-# Helper method
-#
-# create a JSON RPC error message
-jsonRPCviaMQ.toJsonRpcError = function(id, error_code, error_message, version = "2.0") {
+jsonRPCviaMQ.toJsonRpcError = function
+	###
+	### Helper method
+	###
+	### create a JSON RPC error message
+	###
+	(id, error_code, error_message, version = "2.0") {
 	require(RJSONIO);
 	
 	# build the message
@@ -395,15 +420,19 @@ jsonRPCviaMQ.toJsonRpcError = function(id, error_code, error_message, version = 
 	
 	
 	# 'digits=X' ensures we aren't losing precision on floating point numbers
-	jsonMsg <- toJSON(msg, pretty=TRUE, simplify=FALSE, simplifyWithNames = FALSE, digits=50, collapse=" ");
+	jsonMsg <- RJSONIO::toJSON(msg, pretty=TRUE, simplify=FALSE, simplifyWithNames = FALSE, digits=50, collapse=" ");
 	return(jsonMsg);
 }
 
-##
-# Helper method
-#
-# create a JSON RPC success message
-jsonRPCviaMQ.toJsonRpcSuccess = function(id, result = NULL, version="2.0") {
+
+
+jsonRPCviaMQ.toJsonRpcSuccess = function
+	###
+	### Helper method
+	###
+	### create a JSON RPC success message
+	###
+	(id, result = NULL, version="2.0") {
 	require(RJSONIO);
 	
 	msg = list();
@@ -413,22 +442,26 @@ jsonRPCviaMQ.toJsonRpcSuccess = function(id, result = NULL, version="2.0") {
 	msg$result = result;
 
 	# 'digits=X' ensures we aren't losing precision on floating point numbers
-	jsonMsg <- toJSON(msg, pretty=TRUE, simplify=FALSE, simplifyWithNames = FALSE, digits=50, collapse=" ");
+	jsonMsg <- RJSONIO::toJSON(msg, pretty=TRUE, simplify=FALSE, simplifyWithNames = FALSE, digits=50, collapse=" ");
 	return(jsonMsg);
 }
 
 
-##
-# Echo a request to the response queue.  This is a handy method for testing end-to-end.
-#
-jsonRPCviaMQ.echo = function(text) {
+jsonRPCviaMQ.echo = function
+	###
+	### Echo a request to the response queue.  This is a handy method for testing end-to-end.
+	###
+	(text) {
 	return(text);
 }
 
-##
-# Echo a request to the response queue.  This is a handy method for testing end-to-end.
-#
-jsonRPCviaMQ.who = function(sleepS=10) {
+jsonRPCviaMQ.who = function
+	###
+	### Echo a request to the response queue.  This is a handy method for testing end-to-end.
+	###
+	(sleepS=10 ##<< how long to sleep after indicating that this machine is listening (allows other machines to respond)
+	) {
+		
 	response <- paste(Sys.info()["login"], " on ", Sys.info()["nodename"], " is waiting for work, sleeping for ",sleepS,"s", sep="");
 	Sys.sleep(sleepS)
 	return(response);

@@ -1,52 +1,27 @@
-\name{jsonRPCviaMQ-package}
-\alias{jsonRPCviaMQ-package}
-\alias{jsonRPCviaMQ}
-\docType{package}
-\title{
-Allow R to execute json-rpc 2.0 messages retrieved from a message queue (activeMQ, rabbitMQ)
-}
-\description{
-This package provides a simple json-rpc server implementation, which retrieves messages
-from a message queue (rabbitmq or activemq).
-
-Why?
-Allows us to setup worker R instances to leverage idle CPU time around the office.
-
-Doesn't handle?
-Batched RPC requests (yet).
-}
-\details{
-\tabular{ll}{
-Package: \tab jsonRPCviaMQ\cr
-Type: \tab Package\cr
-Version: \tab 1.0\cr
-Date: \tab 2012-10-24\cr
-License: \tab GPL\cr
-}
-
-.
-
-}
-\author{
-Jesse Ross
-Maintainer: Matt MacGillivray <matthew.macgillivray@cornell.edu>
-}
-\references{
-json-rpc - http://www.jsonrpc.org/specification
-futile.logger - https://github.com/muxspace/futile.logger
-MessageQueue - http://r-message-queue.r-forge.r-project.org/
-rJava - http://www.rforge.net/rJava/
-Writing Java Extensions - http://cran.r-project.org/web/packages/helloJavaWorld/vignettes/helloJavaWorld.pdf
-}
-\keyword{ package }
-\keyword{ json }
-\keyword{ json-rpc }
-\keyword{ rpc }
-\keyword{ queue }
-\keyword{ mq }
-\seealso{
-}
-\examples{
-
-# TODO - include a basic example
-}
+\name{jsonRPCviaMQ-package}
+\alias{jsonRPCviaMQ-package}
+\alias{jsonRPCviaMQ}
+\docType{package}
+\title{Execute JSON-RPC messages retrieved from message queue}
+\description{A very simple json-rpc server (loop) that gets requests from a message queue (activeMQ or rabbitMQ) and will reply to a queue if necessary.}
+\details{
+\tabular{ll}{Package: \tab jsonRPCviaMQ\cr
+Type: \tab Package\cr
+Title: \tab Execute JSON-RPC messages retrieved from message queue\cr
+Version: \tab 0.5\cr
+Date: \tab 2013-04-17\cr
+Author: \tab Jesse Ross <jross@cornell.edu>\cr
+Depends: \tab R (>= 2.13.0), rJava (>= 0.6-0), messageQueue (>= 0.4), RJSONIO, futile.logger, testthat\cr
+Suggests: \tab testthat\cr
+Imports: \tab rJava (>= 0.6-0), RJSONIO, messageQueue (>= 0.4), futile.logger\cr
+SystemRequirements: \tab Java (>=7.0)\cr
+Maintainer: \tab Matt MacGillivray <matthew.macgillivray@cornell.edu>\cr
+License: \tab LGPL (>= 2.0)\cr
+Repository: \tab r-forge\cr
+URL: \tab http://jsonRPCviaMQ.r-forge.r-project.org/\cr}
+}
+\author{Jesse Ross <jross@cornell.edu>}
+
+\keyword{ package }
+
+
