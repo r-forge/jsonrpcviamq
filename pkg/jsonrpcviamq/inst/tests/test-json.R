@@ -1,14 +1,16 @@
 # https://github.com/hadley/devtools/wiki/Testing
 
+library(futile.logger);
+library(RJSONIO);
 context("json conversions");
-require(RJSONIO);
 
 
 test_that("can create an rpc error response", {
+	require(RJSONIO);
 	result <- jsonRPCviaMQ.toJsonRpcError(id="123", error_code=-234, error_message="error 123 message");
 	
 	# decode the result, so we can compare the values
-	robj <- fromJSON(result);
+	robj <- RJSONIO::fromJSON(result);
 
 	# check the component parts because the string will always be formatted slightly differently
 	expect_equal(robj[['error']][['code']],-234);
@@ -18,10 +20,11 @@ test_that("can create an rpc error response", {
 
 
 test_that("can create an rpc success response, body is a number", {
+	require(RJSONIO);
 	result <- jsonRPCviaMQ.toJsonRpcSuccess(id="179", result=-17);
 
 	# decode the result, so we can compare the values
-	robj <- fromJSON(result);
+	robj <- RJSONIO::fromJSON(result);
 	
 	# check the component parts because the string will always be formatted slightly differently
 	expect_equal(robj[['result']],-17);
@@ -30,10 +33,11 @@ test_that("can create an rpc success response, body is a number", {
 
 
 test_that("can create an rpc success response, body is a string", {
+	require(RJSONIO);
 	result <- jsonRPCviaMQ.toJsonRpcSuccess(id="488", result="this is a string");
 
 	# decode the result, so we can compare the values
-	robj <- fromJSON(result);
+	robj <- RJSONIO::fromJSON(result);
 	
 	# check the component parts because the string will always be formatted slightly differently
 	expect_equal(robj[['result']],"this is a string");
@@ -42,10 +46,11 @@ test_that("can create an rpc success response, body is a string", {
 
 
 test_that("can create an rpc success response, body is a list", {
+	require(RJSONIO);
 	result <- jsonRPCviaMQ.toJsonRpcSuccess(id="421", result=c("string1","string2","string3"));
 
 	# decode the result, so we can compare the values
-	robj <- fromJSON(result);
+	robj <- RJSONIO::fromJSON(result);
 	
 	# check the component parts because the string will always be formatted slightly differently
 	expect_equal(robj[['result']][1],"string1");

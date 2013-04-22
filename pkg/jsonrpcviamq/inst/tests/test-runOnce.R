@@ -6,13 +6,14 @@ queue <- "amq-runOnce-test-queue";
 replyTo <- "amq-runOnceReply-test-queue";
 type <- "activeMQ";
 
+library(futile.logger);
+library(RJSONIO);
 context("runOnce");
-require(RJSONIO);
-require(futile.logger);
 flog.threshold(TRACE, name="jsonRPCviaMQ");
 
 
 test_that("can execute a single RPC statement", {
+	require(RJSONIO);
 	request <- '{"jsonrpc": "2.0", "method": "Sys.time", "id": "67"}';
 	
 	# put the message on the queue for execution
@@ -38,7 +39,7 @@ test_that("can execute a single RPC statement", {
 	
 	expect_true(!is.null(response), info=paste("runOnce - Message is null."));
 	
-	robj <- fromJSON(response[['value']]);
+	robj <- RJSONIO::fromJSON(response[['value']]);
 
 	
 	# result
@@ -55,6 +56,7 @@ test_that("can execute a single RPC statement", {
 
 
 test_that("can execute a single BATCH RPC statement", {
+	require(RJSONIO);
 	request <- '[ {"jsonrpc": "2.0", "method": "Sys.time", "id": "70"}, {"jsonrpc": "2.0", "method": "Sys.time", "id": "71"} ]';
 	
 	# put the message on the queue for execution
@@ -80,7 +82,7 @@ test_that("can execute a single BATCH RPC statement", {
 	
 	expect_true(!is.null(response), info=paste("runOnce - Message is null."));
 	
-	robj <- fromJSON(response[['value']]);
+	robj <- RJSONIO::fromJSON(response[['value']]);
 
 	
 	# should be 2 results
@@ -103,6 +105,7 @@ test_that("can execute a single BATCH RPC statement", {
 
 
 test_that("can fail gracefully", {
+	require(RJSONIO);
 	request <- '{"jsonrpc": "2.0", "method": "Sys.time", "params": [1], "id": "72"}';
 	
 	flog.debug("can fail gracefully - start");
@@ -131,7 +134,7 @@ test_that("can fail gracefully", {
 	
 	expect_true(!is.null(response), info=paste("runOnce - Message is null."));
 	
-	robj <- fromJSON(response[['value']]);
+	robj <- RJSONIO::fromJSON(response[['value']]);
 
 	
 	# result

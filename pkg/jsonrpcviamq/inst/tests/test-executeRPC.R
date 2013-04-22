@@ -1,15 +1,17 @@
 # https://github.com/hadley/devtools/wiki/Testing
 
+library(futile.logger);
+library(RJSONIO);
 context("executeRPC");
-require(RJSONIO);
-require(futile.logger);
 
 	
 test_that("can respond to an invalid method name", {
+	require(RJSONIO);
+	require(futile.logger);
 	request <- '{"jsonrpc": "2.0", "method": "xxxyyyzzz", "params": null, "id": "144"}';
 	
 	response = jsonRPCviaMQ.executeJsonRPC(request);
-	robj <- fromJSON(response);
+	robj <- RJSONIO::fromJSON(response);
 	
 	
 	# Method not found response
@@ -25,10 +27,12 @@ test_that("can respond to an invalid method name", {
 
 
 test_that("can respond to an invalid request, missing method", {
+	require(RJSONIO);
+	require(futile.logger);
 	request <- '{"jsonrpc": "2.0", "params": null, "id": "145"}';
 	
 	response = jsonRPCviaMQ.executeJsonRPC(request);
-	robj <- fromJSON(response);
+	robj <- RJSONIO::fromJSON(response);
 	
 	
 	# Method not found response
@@ -42,10 +46,12 @@ test_that("can respond to an invalid request, missing method", {
 
 
 test_that("can respond to an invalid request, missing whole request", {
+	require(RJSONIO);
+	require(futile.logger);
 	request <- '{}';
 	
 	response = jsonRPCviaMQ.executeJsonRPC(request);
-	robj <- fromJSON(response);
+	robj <- RJSONIO::fromJSON(response);
 	
 	
 	# Method not found response
@@ -60,6 +66,8 @@ test_that("can respond to an invalid request, missing whole request", {
 
 
 test_that("can respond to a valid request, Sys.time()", {
+	require(RJSONIO);
+	require(futile.logger);
 	#request <- '{"jsonrpc": "2.0", "method": "Sys.time", "params": [], "id": "349"}';
 	request <- '{"jsonrpc": "2.0", "method": "Sys.time", "params": null, "id": "349"}';
 	
@@ -67,7 +75,7 @@ test_that("can respond to a valid request, Sys.time()", {
 	time_before_request <- as.double(Sys.time());
 	
 	response = jsonRPCviaMQ.executeJsonRPC(request);
-	robj <- fromJSON(response);
+	robj <- RJSONIO::fromJSON(response);
 	
 	# result
 	expect_equal(robj[['id']], '349', info=response);
